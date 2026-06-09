@@ -478,24 +478,27 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
-    // Group messages by date and other participant
+    // Group ALL messages by date (include all users, not just selected profile)
     const sessions = {};
     
-    for (const msg of profile.messages) {
+    for (const msg of allMessages) {
       if (!msg.timestamp) continue;
       
       const date = new Date(msg.timestamp).toLocaleDateString();
-      const sessionKey = `${date}_${msg.authorId}`;
+      const sessionKey = date;
       
       if (!sessions[sessionKey]) {
         sessions[sessionKey] = {
           date: date,
-          otherUser: msg.authorId,
-          messages: []
+          messages: [],
+          participants: new Set()
         };
       }
       
       sessions[sessionKey].messages.push(msg);
+      if (msg.authorId) {
+        sessions[sessionKey].participants.add(msg.authorId);
+      }
     }
     
     const sessionKeys = Object.keys(sessions);
@@ -521,11 +524,12 @@ document.addEventListener('DOMContentLoaded', () => {
       sessionEl.onmouseout = () => { if (!sessionEl.dataset.expanded) sessionEl.style.background = '#fff;'; };
       
       const messageCount = session.messages.length;
-      const displayName = profiles[session.otherUser]?.customData?.alias || session.otherUser;
+      const participantCount = session.participants.size;
+      const displayName = participantCount > 1 ? `${participantCount} participants` : (profiles[Array.from(session.participants)[0]]?.customData?.alias || Array.from(session.participants)[0] || 'Unknown');
       
       sessionEl.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 14px; font-weight: 500;">Session with ${escapeHtml(displayName)} on ${session.date}</span>
+          <span style="font-size: 14px; font-weight: 500;">Session on ${session.date}</span>
           <span style="font-size: 12px; color: #666; background: #eee; padding: 2px 6px; border-radius: 8px;">${messageCount} msgs</span>
         </div>
         <div class="session-messages" style="display: none; margin-top: 8px; padding: 8px; background: #fafafa; border-radius: 4px;"></div>
@@ -552,9 +556,10 @@ document.addEventListener('DOMContentLoaded', () => {
             msgEl.style.cssText = 'padding: 4px 0; font-size: 13px; border-bottom: 1px dotted #eee;';
             
             const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            const msgAuthor = msg.author || msg.authorId || 'Unknown';
             
             msgEl.innerHTML = `
-              <span style="font-weight: 600; color: #1976D2;">${escapeHtml(session.otherUser)}</span>
+              <span style="font-weight: 600; color: #1976D2;">${escapeHtml(msgAuthor)}</span>
               <span style="font-size: 11px; color: #999; margin-left: 6px;">${timeStr}</span>
               <div style="color: #333; margin-top: 2px;">${escapeHtml(msg.content)}</div>
             `;
