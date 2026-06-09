@@ -48,30 +48,58 @@ class ChatArchiver {
    * Find the main chat history container
    */
   findChatHistoryContainer() {
-    // Try various selectors for the chat history container
+    // Based on the actual HTML structure, look for the container with message elements
+    // The messages have data-message-id attribute and are inside a flex-col justify-end container
+    
+    // Strategy 1: Find any element with data-message-id and get its parent container
+    const messageElements = document.querySelectorAll('[data-message-id]');
+    if (messageElements.length > 0) {
+      // Look for the closest flex-col parent which contains all messages
+      const container = messageElements[0].closest('.flex-col');
+      if (container) {
+        console.log('[ChatArchiver] Found chat container via flex-col:', container);
+        return container;
+      }
+      
+      // Fallback: use the parent of the first message
+      const parent = messageElements[0].parentElement;
+      if (parent) {
+        console.log('[ChatArchiver] Found chat container via parent:', parent);
+        return parent;
+      }
+    }
+
+    // Strategy 2: Look for containers with specific classes from the HTML
     const selectors = [
-      'div[class*="chat-history"]',
-      'div.chat-history',
-      'div[data-chat-history]',
-      '.chat-container',
-      '[class*="chat"][class*="history"]'
+      '.overflow-y-auto', // The scrollable area
+      '[class*="chat"]', // Any class containing "chat"
+      'div[class*="message"]', // Any class containing "message"
+      '.justify-end' // Message list alignment
     ];
 
     for (const selector of selectors) {
-      const container = document.querySelector(selector);
-      if (container) {
+      const elements = document.querySelectorAll(selector);
+      for (const el of elements) {
+        // Check if this element contains messages
+        if (el.querySelector('[data-message-id]')) {
+          console.log('[ChatArchiver] Found chat container:', selector, el);
+          return el;
+        }
+      }
+    }
+
+    // Strategy 3: Look for the group/msg class pattern
+    const groupMsgElements = document.querySelectorAll('.group\\/msg');
+    if (groupMsgElements.length > 0) {
+      const container = groupMsgElements[0].closest('.flex-col') || 
+                        groupMsgElements[0].parentElement?.parentElement;
+      if (container && container.querySelector('[data-message-id]')) {
+        console.log('[ChatArchiver] Found chat container via group/msg:', container);
         return container;
       }
     }
 
-    // Fallback: look for a container with message-row children
-    const potentialContainers = document.querySelectorAll('div');
-    for (const div of potentialContainers) {
-      if (div.querySelector('.message-row')) {
-        return div;
-      }
-    }
-
+    console.warn('[ChatArchiver] Chat history container not found');
     return null;
   }
 
@@ -79,15 +107,33 @@ class ChatArchiver {
    * Find all message row elements within the container
    */
   findAllMessageRows(container) {
-    // Look for direct children that are message rows
-    const messageRows = container.querySelectorAll(':scope > .message-row, :scope > div[id*="uuid"], :scope > div[data-message-id]');
+    // Based on the actual HTML, messages have data-message-id attribute
+    // and use classes like "group/msg", not "message-row"
     
-    if (messageRows.length === 0) {
-      // Fallback: search deeper
-      return container.querySelectorAll('.message-row');
+    // Primary: find all elements with data-message-id
+    const messageElements = container.querySelectorAll('[data-message-id]');
+    
+    if (messageElements.length > 0) {
+      console.log('[ChatArchiver] Found', messageElements.length, 'messages via data-message-id');
+      return Array.from(messageElements);
+    }
+    
+    // Fallback: look for group/msg elements
+    const groupMsgElements = container.querySelectorAll('.group\\/msg');
+    if (groupMsgElements.length > 0) {
+      console.log('[ChatArchiver] Found', groupMsgElements.length, 'messages via group/msg');
+      return Array.from(groupMsgElements);
+    }
+    
+    // Last resort: try message-row class (original approach)
+    const messageRows = container.querySelectorAll('.message-row');
+    if (messageRows.length > 0) {
+      console.log('[ChatArchiver] Found', messageRows.length, 'messages via message-row');
+      return Array.from(messageRows);
     }
 
-    return Array.from(messageRows);
+    console.warn('[ChatArchiver] No message rows found');
+    return [];
   }
 
   /**
@@ -136,11 +182,14 @@ class ChatArchiver {
    * Check if message is a continuation (lacks profile-area, has mt-1 class)
    */
   isContinuationMessage(row) {
-    const profileArea = row.querySelector('.profile-area');
+    // Based on actual HTML: continuations lack the avatar button and have mt-0/mt-1 classes
+    // Look for the absence of the profile button (shrink-0 self-start rounded-full)
+    const profileButton = row.querySelector('button[aria-label*="profile"], .avatar, img[src*="avatars"]');
     const hasMt1Class = row.classList.contains('mt-1');
     const hasPlClass = row.querySelector('[class*="pl-"]');
-
-    return !profileArea && (hasMt1Class || hasPlClass);
+    
+    // If no profile button/image found, it's likely a continuation
+    return !profileButton && (hasMt1Class || hasPlClass);
   }
 
   /**
@@ -156,24 +205,32 @@ class ChatArchiver {
    * Parse a normal message with profile area
    */
   parseNormalMessage(row, messageId) {
-    const profileArea = row.querySelector('.profile-area');
-    const messageContent = row.querySelector('.message-content');
+    // Based on actual HTML structure:
+    // - Avatar is in a button with aria-label containing "profile"
+    // - Username is in a span with classes for text styling
+    // - Message content is in the div after the avatar button
+    
+    const avatarButton = row.querySelector('button[aria-label*="profile"]');
+    const avatarImg = avatarButton?.querySelector('img') || row.querySelector('img[src*="avatars"]');
+    const usernameEl = row.querySelector('span[class*="font-semibold"], [class*="username"]');
+    const messageContent = row.querySelector('.min-w-0.flex-1')?.lastElementChild || 
+                           row.querySelector('[class*="message"]') ||
+                           row.querySelector('p');
 
-    if (!messageContent) {
+    if (!messageContent && !usernameEl) {
       return null;
     }
 
-    const author = profileArea ? this.extractUsername(profileArea) : null;
-    const authorId = profileArea ? this.extractAuthorId(profileArea) : null;
-    const avatar = profileArea ? this.extractAvatar(profileArea) : null;
-    const content = this.extractMessageContent(messageContent);
+    const author = usernameEl ? this.extractUsernameFromText(usernameEl) : null;
+    const avatar = avatarImg ? (avatarImg.src || avatarImg.dataset?.src) : null;
+    const content = this.extractMessageContent(messageContent || row);
     const timestamp = this.extractTimestamp(row);
 
     return {
       id: messageId,
       type: 'normal',
       author: author,
-      authorId: authorId,
+      authorId: null,
       avatar: avatar,
       content: content,
       timestamp: timestamp,
@@ -185,7 +242,10 @@ class ChatArchiver {
    * Parse a continuation message (no profile area)
    */
   parseContinuationMessage(row, messageId, lastAuthor, lastAuthorId) {
-    const messageContent = row.querySelector('.message-content');
+    // For continuations, look for text content in the flex-1 div or p tags
+    const messageContent = row.querySelector('.min-w-0.flex-1') || 
+                           row.querySelector('p') ||
+                           row;
 
     if (!messageContent) {
       return null;
@@ -261,6 +321,20 @@ class ChatArchiver {
       return textNodes[0].textContent.trim();
     }
 
+    return null;
+  }
+
+  /**
+   * Extract username from text element (new method for actual HTML structure)
+   */
+  extractUsernameFromText(el) {
+    if (!el) return null;
+    
+    const text = el.textContent.trim();
+    if (text) {
+      return text;
+    }
+    
     return null;
   }
 
