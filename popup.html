@@ -12,29 +12,30 @@
     }
 
     body {
-      width: 320px;
-      padding: 16px;
+      width: 480px;
+      max-height: 600px;
+      padding: 20px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-      font-size: 14px;
+      font-size: 16px;
       color: #333;
       background: #f5f5f5;
     }
 
     h1 {
-      font-size: 16px;
+      font-size: 20px;
       font-weight: 600;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
       color: #1a1a1a;
     }
 
     .sync-btn {
       width: 100%;
-      padding: 12px 16px;
+      padding: 14px 18px;
       background: #4CAF50;
       color: white;
       border: none;
       border-radius: 6px;
-      font-size: 14px;
+      font-size: 16px;
       font-weight: 600;
       cursor: pointer;
       transition: background 0.2s;
@@ -60,10 +61,10 @@
     }
 
     .status {
-      margin-top: 12px;
-      padding: 10px;
+      margin-top: 14px;
+      padding: 12px;
       border-radius: 6px;
-      font-size: 13px;
+      font-size: 15px;
       display: none;
     }
 
@@ -89,29 +90,29 @@
     }
 
     .settings {
-      margin-top: 16px;
-      padding-top: 12px;
+      margin-top: 18px;
+      padding-top: 14px;
       border-top: 1px solid #ddd;
     }
 
     .settings label {
       display: block;
-      font-size: 12px;
+      font-size: 14px;
       color: #666;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
 
     .settings input {
       width: 100%;
-      padding: 8px;
+      padding: 10px;
       border: 1px solid #ddd;
       border-radius: 4px;
-      font-size: 13px;
+      font-size: 15px;
     }
 
     .stats {
-      margin-top: 12px;
-      font-size: 12px;
+      margin-top: 14px;
+      font-size: 14px;
       color: #666;
     }
 
@@ -121,20 +122,20 @@
     }
 
     .profile-section {
-      margin-top: 16px;
-      padding-top: 12px;
+      margin-top: 18px;
+      padding-top: 14px;
       border-top: 1px solid #ddd;
     }
 
     .profile-section h2 {
-      font-size: 14px;
+      font-size: 17px;
       font-weight: 600;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
       color: #1a1a1a;
     }
 
     .profile-list {
-      max-height: 200px;
+      max-height: 250px;
       overflow-y: auto;
       border: 1px solid #ddd;
       border-radius: 4px;
@@ -142,7 +143,7 @@
     }
 
     .profile-item {
-      padding: 8px 12px;
+      padding: 10px 14px;
       border-bottom: 1px solid #eee;
       cursor: pointer;
       transition: background 0.2s;
@@ -164,30 +165,30 @@
     }
 
     .profile-name {
-      font-size: 13px;
+      font-size: 15px;
       color: #333;
     }
 
     .message-count {
-      font-size: 11px;
+      font-size: 13px;
       color: #666;
       background: #eee;
-      padding: 2px 6px;
+      padding: 3px 8px;
       border-radius: 10px;
     }
 
     .profile-actions {
-      margin-top: 8px;
+      margin-top: 10px;
       display: flex;
-      gap: 8px;
+      gap: 10px;
     }
 
     .action-btn {
       flex: 1;
-      padding: 8px;
+      padding: 10px;
       border: none;
       border-radius: 4px;
-      font-size: 12px;
+      font-size: 14px;
       font-weight: 500;
       cursor: pointer;
       transition: background 0.2s;
@@ -208,35 +209,35 @@
     }
 
     .preview-area {
-      margin-top: 8px;
-      padding: 8px;
+      margin-top: 10px;
+      padding: 10px;
       border: 1px solid #ddd;
       border-radius: 4px;
       background: #fafafa;
-      font-size: 11px;
+      font-size: 13px;
       color: #666;
-      max-height: 100px;
+      max-height: 150px;
       overflow-y: auto;
       white-space: pre-wrap;
       word-break: break-word;
     }
 
     .no-profiles {
-      padding: 16px;
+      padding: 18px;
       text-align: center;
       color: #999;
-      font-size: 12px;
+      font-size: 14px;
     }
 
     .load-profiles-btn {
       width: 100%;
-      padding: 8px;
-      margin-top: 8px;
+      padding: 10px;
+      margin-top: 10px;
       background: #fff;
       color: #333;
       border: 1px solid #ddd;
       border-radius: 4px;
-      font-size: 12px;
+      font-size: 14px;
       cursor: pointer;
       transition: background 0.2s;
     }
@@ -246,16 +247,189 @@
     }
 
     .storage-info {
-      margin-top: 12px;
-      padding: 10px;
+      margin-top: 14px;
+      padding: 12px;
       background: #e8f5e9;
       border-radius: 6px;
-      font-size: 12px;
+      font-size: 14px;
       color: #2e7d32;
     }
 
     .storage-info p {
-      margin-bottom: 8px;
+      margin-bottom: 10px;
+    }
+
+    /* Profile Editor Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      width: 400px;
+      max-height: 500px;
+      overflow-y: auto;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #1a1a1a;
+    }
+
+    .modal-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .form-group label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #555;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      padding: 8px 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .modal-actions .action-btn {
+      flex: 1;
+    }
+
+    .save-btn {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .save-btn:hover {
+      background: #45a049;
+    }
+
+    .cancel-btn {
+      background: #f44336;
+      color: white;
+    }
+
+    .cancel-btn:hover {
+      background: #d32f2f;
+    }
+
+    /* Manual Import Section */
+    .import-section {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid #ddd;
+    }
+
+    .import-section h2 {
+      font-size: 17px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #1a1a1a;
+    }
+
+    .import-textarea {
+      width: 100%;
+      height: 120px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: monospace;
+      resize: vertical;
+    }
+
+    .import-btn {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      background: #9C27B0;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .import-btn:hover {
+      background: #7B1FA2;
+    }
+
+    .messages-container {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #fff;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .message-item {
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+      font-size: 13px;
+    }
+
+    .message-item:last-child {
+      border-bottom: none;
+    }
+
+    .message-author {
+      font-weight: 600;
+      color: #1976D2;
+    }
+
+    .message-time {
+      font-size: 11px;
+      color: #999;
+      margin-left: 8px;
+    }
+
+    .message-content {
+      margin-top: 4px;
+      color: #333;
     }
   </style>
 </head>
@@ -290,9 +464,59 @@
       Click "Load Profiles" to see chat participants
     </div>
     <div class="profile-actions" id="profileActions" style="display: none;">
+      <button id="editProfileBtn" class="action-btn" style="background: #FF9800; color: white;">✏️ Edit Profile</button>
       <button id="copyChatBtn" class="action-btn copy-btn">📋 Copy Chat History</button>
     </div>
-    <div id="previewArea" class="preview-area" style="display: none;"></div>
+    <div id="messagesContainer" class="messages-container" style="display: none;"></div>
+  </div>
+
+  <div class="import-section">
+    <h2>📥 Manual Import</h2>
+    <textarea id="importTextarea" class="import-textarea" placeholder="Paste chat history here...
+
+Example format:
+username5:08 PM
+Message content here
+otheruser5:09 PM
+Their response"></textarea>
+    <button id="importBtn" class="import-btn">Import Chat History</button>
+  </div>
+  
+  <!-- Profile Editor Modal -->
+  <div id="profileModal" class="modal-overlay">
+    <div class="modal">
+      <h2>✏️ Edit Profile</h2>
+      <div class="modal-form">
+        <div class="form-group">
+          <label for="editAlias">Alias/Username</label>
+          <input type="text" id="editAlias" placeholder="Username">
+        </div>
+        <div class="form-group">
+          <label for="editTags">Tags (comma-separated)</label>
+          <input type="text" id="editTags" placeholder="tag1, tag2, tag3">
+        </div>
+        <div class="form-group">
+          <label for="editGender">Gender</label>
+          <input type="text" id="editGender" placeholder="Gender">
+        </div>
+        <div class="form-group">
+          <label for="editAge">Age</label>
+          <input type="number" id="editAge" placeholder="Age" min="0" max="150">
+        </div>
+        <div class="form-group">
+          <label for="editKinks">Kinks/Interests</label>
+          <textarea id="editKinks" placeholder="List kinks or interests here..."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="editNotes">Notes</label>
+          <textarea id="editNotes" placeholder="Additional notes..."></textarea>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="saveProfileBtn" class="action-btn save-btn">💾 Save</button>
+        <button id="cancelProfileBtn" class="action-btn cancel-btn">❌ Cancel</button>
+      </div>
+    </div>
   </div>
 
   <script src="popup.js"></script>
