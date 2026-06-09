@@ -167,6 +167,15 @@
     .profile-name {
       font-size: 15px;
       color: #333;
+      font-weight: 500;
+    }
+
+    .profile-gender,
+    .profile-age {
+      font-size: 12px;
+      color: #666;
+      margin-left: 4px;
+      display: inline-block;
     }
 
     .message-count {
@@ -468,6 +477,12 @@
       <button id="copyChatBtn" class="action-btn copy-btn">📋 Copy Chat History</button>
     </div>
     <div id="messagesContainer" class="messages-container" style="display: none;"></div>
+    
+    <!-- Sessions List -->
+    <div id="sessionsContainer" class="sessions-container" style="display: none; margin-top: 15px;">
+      <h3 style="font-size: 16px; color: #333; margin-bottom: 8px;">Sessions</h3>
+      <div id="sessionsList" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; background: #fff;"></div>
+    </div>
   </div>
 
   <div class="import-section">
