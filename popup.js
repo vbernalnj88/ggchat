@@ -383,8 +383,21 @@ document.addEventListener('DOMContentLoaded', () => {
       // Show custom alias if available
       const displayName = profile.customData?.alias || profile.name;
       
+      // Build age/gender info string
+      let infoString = '';
+      if (profile.customData?.gender && profile.customData?.age) {
+        infoString = `${profile.customData.gender}, ${profile.customData.age}`;
+      } else if (profile.customData?.gender) {
+        infoString = profile.customData.gender;
+      } else if (profile.customData?.age) {
+        infoString = `${profile.customData.age}`;
+      }
+      
       itemEl.innerHTML = `
-        <span class="profile-name">${escapeHtml(displayName)}</span>
+        <div class="profile-info">
+          <span class="profile-name">${escapeHtml(displayName)}</span>
+          ${infoString ? `<span class="profile-meta">${escapeHtml(infoString)}</span>` : ''}
+        </div>
         <span class="message-count">${profile.messages.length}</span>
       `;
       

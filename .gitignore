@@ -1,1 +1,1 @@
-Nothing needs to be added to the .gitignore file since only source code files (popup.html and popup.js) were modified, and there are no build artifacts, dependencies, or temporary files in the changes.
+Nothing needs to be added to .gitignore since only source files (popup.html, popup.js) were modified and no build artifacts, dependencies, or temporary files were present in the changes.
