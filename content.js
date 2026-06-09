@@ -9,6 +9,14 @@
 class ChatArchiver {
   constructor() {
     this.extractedMessages = [];
+    this.currentRoomId = null;
+    // Extract room ID from URL on initialization
+    if (typeof window !== 'undefined' && window.location) {
+      const urlMatch = window.location.href.match(/\/play\/[^/]+\/([a-f0-9-]+)/i);
+      if (urlMatch) {
+        this.currentRoomId = urlMatch[1];
+      }
+    }
   }
 
   /**
@@ -231,6 +239,7 @@ class ChatArchiver {
       type: 'normal',
       author: author,
       authorId: null,
+      roomId: this.currentRoomId,
       avatar: avatar,
       content: content,
       timestamp: timestamp,
@@ -259,6 +268,7 @@ class ChatArchiver {
       type: 'continuation',
       author: lastAuthor,
       authorId: lastAuthorId,
+      roomId: this.currentRoomId,
       avatar: null,
       content: content,
       timestamp: timestamp,
@@ -296,6 +306,7 @@ class ChatArchiver {
       type: 'task',
       author: author,
       authorId: authorId,
+      roomId: this.currentRoomId,
       avatar: null,
       title: title,
       content: body,

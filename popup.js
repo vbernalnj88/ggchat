@@ -478,27 +478,88 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
-    // Group ALL messages by date (include all users, not just selected profile)
+    // Get current room URL from active tab to filter messages by room
+    let currentRoomId = null;
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs && tabs[0] && tabs[0].url) {
+        const urlMatch = tabs[0].url.match(/\/play\/[^/]+\/([a-f0-9-]+)/i);
+        if (urlMatch) {
+          currentRoomId = urlMatch[1];
+        }
+      }
+      // Render sessions with the room ID (may be null if not in a room)
+      renderSessionsWithRoomId(profile, currentRoomId);
+    });
+  }
+
+  function renderSessionsWithRoomId(profile, roomId) {
+    sessionsListEl.innerHTML = '';
+    sessionsContainerEl.style.display = 'none';
+    
+    if (!profile.messages || profile.messages.length === 0) {
+      return;
+    }
+    
+    // Filter messages to only include those from the current room (if roomId is available)
+    let messagesToProcess = allMessages;
+    if (roomId) {
+      messagesToProcess = allMessages.filter(msg => msg.roomId === roomId);
+    }
+    
+    // Group messages by date and unique participant combinations
+    // A session is defined by: date + exact set of participants who exchanged messages in sequence
     const sessions = {};
     
-    for (const msg of allMessages) {
+    // Sort all messages by timestamp first
+    const sortedMessages = [...messagesToProcess].sort((a, b) => {
+      if (!a.timestamp) return 1;
+      if (!b.timestamp) return -1;
+      return new Date(a.timestamp) - new Date(b.timestamp);
+    });
+    
+    let currentSessionKey = null;
+    let currentParticipants = new Set();
+    let lastAuthorId = null;
+    
+    for (const msg of sortedMessages) {
       if (!msg.timestamp) continue;
       
       const date = new Date(msg.timestamp).toLocaleDateString();
-      const sessionKey = date;
+      const authorId = msg.authorId || msg.author || 'unknown';
       
-      if (!sessions[sessionKey]) {
-        sessions[sessionKey] = {
+      // Check if we need to start a new session
+      // New session if: different date, or participant set changes (new person joins or conversation switches)
+      const needsNewSession = !currentSessionKey || 
+                              !date.startsWith(currentSessionKey.split('|')[0]) ||
+                              (lastAuthorId && lastAuthorId !== authorId && !currentParticipants.has(authorId));
+      
+      if (needsNewSession) {
+        // Save previous session if exists
+        if (currentSessionKey && sessions[currentSessionKey]) {
+          sessions[currentSessionKey].participants = new Set(currentParticipants);
+        }
+        
+        // Start new session
+        currentParticipants = new Set();
+        currentSessionKey = `${date}|${Date.now()}`; // Unique key per session
+        
+        sessions[currentSessionKey] = {
           date: date,
           messages: [],
-          participants: new Set()
+          participants: new Set(),
+          startTime: msg.timestamp
         };
       }
       
-      sessions[sessionKey].messages.push(msg);
-      if (msg.authorId) {
-        sessions[sessionKey].participants.add(msg.authorId);
-      }
+      sessions[currentSessionKey].messages.push(msg);
+      sessions[currentSessionKey].participants.add(authorId);
+      currentParticipants.add(authorId);
+      lastAuthorId = authorId;
+    }
+    
+    // Save last session
+    if (currentSessionKey && sessions[currentSessionKey]) {
+      sessions[currentSessionKey].participants = new Set(currentParticipants);
     }
     
     const sessionKeys = Object.keys(sessions);
@@ -509,11 +570,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     sessionsContainerEl.style.display = 'block';
     
-    // Sort sessions by date (newest first)
+    // Sort sessions by start time (newest first)
     sessionKeys.sort((a, b) => {
-      const dateA = new Date(sessions[a].date);
-      const dateB = new Date(sessions[b].date);
-      return dateB - dateA;
+      if (!sessions[a].startTime) return 1;
+      if (!sessions[b].startTime) return -1;
+      return new Date(sessions[b].startTime) - new Date(sessions[a].startTime);
     });
     
     for (const key of sessionKeys) {
@@ -525,11 +586,11 @@ document.addEventListener('DOMContentLoaded', () => {
       
       const messageCount = session.messages.length;
       const participantCount = session.participants.size;
-      const displayName = participantCount > 1 ? `${participantCount} participants` : (profiles[Array.from(session.participants)[0]]?.customData?.alias || Array.from(session.participants)[0] || 'Unknown');
+      const participantNames = Array.from(session.participants).map(pid => profiles[pid]?.customData?.alias || pid).join(', ');
       
       sessionEl.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 14px; font-weight: 500;">Session on ${session.date}</span>
+          <span style="font-size: 14px; font-weight: 500;">Session on ${session.date} (${participantNames})</span>
           <span style="font-size: 12px; color: #666; background: #eee; padding: 2px 6px; border-radius: 8px;">${messageCount} msgs</span>
         </div>
         <div class="session-messages" style="display: none; margin-top: 8px; padding: 8px; background: #fafafa; border-radius: 4px;"></div>
