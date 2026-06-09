@@ -17,6 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const copyChatBtn = document.getElementById('copyChatBtn');
   const editProfileBtn = document.getElementById('editProfileBtn');
   const messagesContainerEl = document.getElementById('messagesContainer');
+  const sessionsContainerEl = document.getElementById('sessionsContainer');
+  const sessionsListEl = document.getElementById('sessionsList');
   const clearStorageBtn = document.getElementById('clearStorageBtn');
   
   // Manual import elements
@@ -74,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
         noProfilesMsgEl.style.display = 'block';
         profileActionsEl.style.display = 'none';
         messagesContainerEl.style.display = 'none';
+        sessionsContainerEl.style.display = 'none';
         updateStatsDisplay(0);
       });
     }
@@ -458,6 +461,110 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
       
       messagesContainerEl.appendChild(msgEl);
+    }
+    
+    // Render sessions after messages
+    renderSessions(profile);
+  }
+
+  /**
+   * Render sessions list for selected profile
+   */
+  function renderSessions(profile) {
+    sessionsListEl.innerHTML = '';
+    sessionsContainerEl.style.display = 'none';
+    
+    if (!profile.messages || profile.messages.length === 0) {
+      return;
+    }
+    
+    // Group messages by date and other participant
+    const sessions = {};
+    
+    for (const msg of profile.messages) {
+      if (!msg.timestamp) continue;
+      
+      const date = new Date(msg.timestamp).toLocaleDateString();
+      const sessionKey = `${date}_${msg.authorId}`;
+      
+      if (!sessions[sessionKey]) {
+        sessions[sessionKey] = {
+          date: date,
+          otherUser: msg.authorId,
+          messages: []
+        };
+      }
+      
+      sessions[sessionKey].messages.push(msg);
+    }
+    
+    const sessionKeys = Object.keys(sessions);
+    
+    if (sessionKeys.length === 0) {
+      return;
+    }
+    
+    sessionsContainerEl.style.display = 'block';
+    
+    // Sort sessions by date (newest first)
+    sessionKeys.sort((a, b) => {
+      const dateA = new Date(sessions[a].date);
+      const dateB = new Date(sessions[b].date);
+      return dateB - dateA;
+    });
+    
+    for (const key of sessionKeys) {
+      const session = sessions[key];
+      const sessionEl = document.createElement('div');
+      sessionEl.style.cssText = 'padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s;';
+      sessionEl.onmouseover = () => { if (!sessionEl.dataset.expanded) sessionEl.style.background = '#f0f0f0;'; };
+      sessionEl.onmouseout = () => { if (!sessionEl.dataset.expanded) sessionEl.style.background = '#fff;'; };
+      
+      const messageCount = session.messages.length;
+      const displayName = profiles[session.otherUser]?.customData?.alias || session.otherUser;
+      
+      sessionEl.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 14px; font-weight: 500;">Session with ${escapeHtml(displayName)} on ${session.date}</span>
+          <span style="font-size: 12px; color: #666; background: #eee; padding: 2px 6px; border-radius: 8px;">${messageCount} msgs</span>
+        </div>
+        <div class="session-messages" style="display: none; margin-top: 8px; padding: 8px; background: #fafafa; border-radius: 4px;"></div>
+      `;
+      
+      sessionEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const messagesDiv = sessionEl.querySelector('.session-messages');
+        const isExpanded = sessionEl.dataset.expanded === 'true';
+        
+        if (isExpanded) {
+          messagesDiv.style.display = 'none';
+          sessionEl.dataset.expanded = 'false';
+          sessionEl.style.background = '#fff';
+        } else {
+          messagesDiv.style.display = 'block';
+          sessionEl.dataset.expanded = 'true';
+          sessionEl.style.background = '#e3f2fd';
+          
+          // Render session messages
+          messagesDiv.innerHTML = '';
+          for (const msg of session.messages) {
+            const msgEl = document.createElement('div');
+            msgEl.style.cssText = 'padding: 4px 0; font-size: 13px; border-bottom: 1px dotted #eee;';
+            
+            const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            
+            msgEl.innerHTML = `
+              <span style="font-weight: 600; color: #1976D2;">${escapeHtml(session.otherUser)}</span>
+              <span style="font-size: 11px; color: #999; margin-left: 6px;">${timeStr}</span>
+              <div style="color: #333; margin-top: 2px;">${escapeHtml(msg.content)}</div>
+            `;
+            
+            messagesDiv.appendChild(msgEl);
+          }
+        }
+      });
+      
+      sessionsListEl.appendChild(sessionEl);
     }
   }
 
