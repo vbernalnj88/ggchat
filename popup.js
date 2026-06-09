@@ -386,15 +386,18 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Build age/gender info string for inline display
       let infoHtml = '';
-      if (profile.customData?.gender && profile.customData.gender.trim() !== "") {
-        infoHtml += ` <span class="profile-gender">(${escapeHtml(profile.customData.gender)})</span>`;
+      const gender = profile.customData?.gender?.trim();
+      const age = profile.customData?.age?.toString().trim();
+      
+      if (gender && gender !== "") {
+        infoHtml += ` <span class="profile-gender">(${escapeHtml(gender)})</span>`;
       }
-      if (profile.customData?.age && profile.customData.age.toString().trim() !== "") {
-        infoHtml += ` <span class="profile-age">(${profile.customData.age})</span>`;
+      if (age && age !== "" && age !== "0") {
+        infoHtml += ` <span class="profile-age">(${escapeHtml(age)})</span>`;
       }
       
       itemEl.innerHTML = `
-        <span class="profile-name">${escapeHtml(displayName)}${infoHtml}</span>
+        <span class="profile-name">${escapeHtml(displayName)}</span>${infoHtml}
         <span class="message-count">${profile.messages.length}</span>
       `;
       
