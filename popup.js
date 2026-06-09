@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
       alias: editAliasInput.value.trim(),
       tags: editTagsInput.value.split(',').map(t => t.trim()).filter(t => t),
       gender: editGenderInput.value.trim(),
-      age: editAgeInput.value ? parseInt(editAgeInput.value) : null,
+      age: editAgeInput.value.trim() || '',
       kinks: editKinksInput.value.trim(),
       notes: editNotesInput.value.trim()
     };
@@ -196,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       showStatus('success', 'Profile saved!');
       closeProfileEditor();
+      renderProfiles(); // Re-render the profile list to show updated info
     });
   });
 
@@ -385,10 +386,10 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Build age/gender info string for inline display
       let infoHtml = '';
-      if (profile.customData?.gender) {
+      if (profile.customData?.gender && profile.customData.gender.trim() !== "") {
         infoHtml += ` <span class="profile-gender">(${escapeHtml(profile.customData.gender)})</span>`;
       }
-      if (profile.customData?.age) {
+      if (profile.customData?.age && profile.customData.age.toString().trim() !== "") {
         infoHtml += ` <span class="profile-age">(${profile.customData.age})</span>`;
       }
       
