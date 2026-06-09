@@ -15,8 +15,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const noProfilesMsgEl = document.getElementById('noProfilesMsg');
   const profileActionsEl = document.getElementById('profileActions');
   const copyChatBtn = document.getElementById('copyChatBtn');
-  const previewAreaEl = document.getElementById('previewArea');
+  const editProfileBtn = document.getElementById('editProfileBtn');
+  const messagesContainerEl = document.getElementById('messagesContainer');
   const clearStorageBtn = document.getElementById('clearStorageBtn');
+  
+  // Manual import elements
+  const importTextarea = document.getElementById('importTextarea');
+  const importBtn = document.getElementById('importBtn');
+  
+  // Profile editor modal elements
+  const profileModal = document.getElementById('profileModal');
+  const editAliasInput = document.getElementById('editAlias');
+  const editTagsInput = document.getElementById('editTags');
+  const editGenderInput = document.getElementById('editGender');
+  const editAgeInput = document.getElementById('editAge');
+  const editKinksInput = document.getElementById('editKinks');
+  const editNotesInput = document.getElementById('editNotes');
+  const saveProfileBtn = document.getElementById('saveProfileBtn');
+  const cancelProfileBtn = document.getElementById('cancelProfileBtn');
   
   // State
   let allMessages = [];
@@ -57,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
         profileListEl.innerHTML = '';
         noProfilesMsgEl.style.display = 'block';
         profileActionsEl.style.display = 'none';
-        previewAreaEl.style.display = 'none';
+        messagesContainerEl.style.display = 'none';
         updateStatsDisplay(0);
       });
     }
@@ -137,14 +153,90 @@ document.addEventListener('DOMContentLoaded', () => {
     
     navigator.clipboard.writeText(chatHistory).then(() => {
       showStatus('success', `Copied ${profiles[selectedProfile].messages.length} messages to clipboard!`);
-      
-      // Show preview
-      previewAreaEl.textContent = chatHistory.substring(0, 500) + (chatHistory.length > 500 ? '\n\n... (truncated)' : '');
-      previewAreaEl.style.display = 'block';
     }).catch(err => {
       console.error('Copy failed:', err);
       showStatus('error', 'Failed to copy to clipboard');
     });
+  });
+
+  // Edit profile button
+  editProfileBtn.addEventListener('click', () => {
+    if (!selectedProfile || !profiles[selectedProfile]) {
+      showStatus('error', 'No profile selected');
+      return;
+    }
+    
+    openProfileEditor(selectedProfile);
+  });
+
+  // Save profile button
+  saveProfileBtn.addEventListener('click', () => {
+    if (!selectedProfile) {
+      showStatus('error', 'No profile selected');
+      return;
+    }
+    
+    const profileData = {
+      alias: editAliasInput.value.trim(),
+      tags: editTagsInput.value.split(',').map(t => t.trim()).filter(t => t),
+      gender: editGenderInput.value.trim(),
+      age: editAgeInput.value ? parseInt(editAgeInput.value) : null,
+      kinks: editKinksInput.value.trim(),
+      notes: editNotesInput.value.trim()
+    };
+    
+    // Save to chrome storage
+    const storageKey = `profile_${selectedProfile}`;
+    chrome.storage.local.set({ [storageKey]: profileData }, () => {
+      // Update local profiles object
+      if (!profiles[selectedProfile].customData) {
+        profiles[selectedProfile].customData = {};
+      }
+      Object.assign(profiles[selectedProfile].customData, profileData);
+      
+      showStatus('success', 'Profile saved!');
+      closeProfileEditor();
+    });
+  });
+
+  // Cancel profile edit
+  cancelProfileBtn.addEventListener('click', () => {
+    closeProfileEditor();
+  });
+
+  // Close modal when clicking outside
+  profileModal.addEventListener('click', (e) => {
+    if (e.target === profileModal) {
+      closeProfileEditor();
+    }
+  });
+
+  // Manual import button
+  importBtn.addEventListener('click', () => {
+    const text = importTextarea.value.trim();
+    if (!text) {
+      showStatus('error', 'Please paste some text to import');
+      return;
+    }
+    
+    const importedMessages = parseImportedText(text);
+    if (importedMessages.length === 0) {
+      showStatus('error', 'No valid messages found in the pasted text');
+      return;
+    }
+    
+    // Add to allMessages
+    allMessages = [...allMessages, ...importedMessages];
+    
+    // Re-process profiles
+    processProfiles(allMessages);
+    renderProfileList();
+    updateStatsDisplay(allMessages.length);
+    
+    // Clear textarea
+    importTextarea.value = '';
+    
+    showStatus('success', `Imported ${importedMessages.length} messages!`);
   });
 
   syncBtn.addEventListener('click', async () => {
@@ -236,7 +328,8 @@ document.addEventListener('DOMContentLoaded', () => {
           name: msg.author,
           authorId: msg.authorId,
           avatar: msg.avatar,
-          messages: []
+          messages: [],
+          customData: null
         };
       }
       
@@ -248,6 +341,16 @@ document.addEventListener('DOMContentLoaded', () => {
         timestamp: msg.timestamp
       });
     }
+    
+    // Load custom data for each profile from storage
+    Object.keys(profiles).forEach(key => {
+      const storageKey = `profile_${key}`;
+      chrome.storage.local.get([storageKey], (result) => {
+        if (result[storageKey]) {
+          profiles[key].customData = result[storageKey];
+        }
+      });
+    });
   }
 
   /**
@@ -260,6 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
       profileListEl.style.display = 'none';
       noProfilesMsgEl.style.display = 'block';
       profileActionsEl.style.display = 'none';
+      messagesContainerEl.style.display = 'none';
       return;
     }
     
@@ -276,8 +380,11 @@ document.addEventListener('DOMContentLoaded', () => {
       itemEl.className = 'profile-item';
       itemEl.dataset.profile = key;
       
+      // Show custom alias if available
+      const displayName = profile.customData?.alias || profile.name;
+      
       itemEl.innerHTML = `
-        <span class="profile-name">${escapeHtml(profile.name)}</span>
+        <span class="profile-name">${escapeHtml(displayName)}</span>
         <span class="message-count">${profile.messages.length}</span>
       `;
       
@@ -293,7 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * Select a profile and show its actions
+   * Select a profile and show its messages
    */
   function selectProfile(profileKey) {
     // Remove previous selection
@@ -311,16 +418,119 @@ document.addEventListener('DOMContentLoaded', () => {
     selectedProfile = profileKey;
     profileActionsEl.style.display = 'flex';
     
-    // Show preview of first message
+    // Show messages in scrollable container
     const profile = profiles[profileKey];
     if (profile && profile.messages.length > 0) {
-      const firstMsg = profile.messages[0];
-      const preview = firstMsg.title 
-        ? `[${firstMsg.type}] ${firstMsg.title}: ${firstMsg.content}`
-        : `[${firstMsg.type}] ${firstMsg.content}`;
-      previewAreaEl.textContent = preview.substring(0, 200) + (preview.length > 200 ? '...' : '');
-      previewAreaEl.style.display = 'block';
+      renderMessages(profile);
     }
+  }
+
+  /**
+   * Render messages for selected profile
+   */
+  function renderMessages(profile) {
+    messagesContainerEl.innerHTML = '';
+    messagesContainerEl.style.display = 'block';
+    
+    for (const msg of profile.messages) {
+      const msgEl = document.createElement('div');
+      msgEl.className = 'message-item';
+      
+      const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+      
+      msgEl.innerHTML = `
+        <span class="message-author">${escapeHtml(profile.name)}</span>
+        <span class="message-time">${timeStr}</span>
+        <div class="message-content">${escapeHtml(msg.content)}</div>
+      `;
+      
+      messagesContainerEl.appendChild(msgEl);
+    }
+  }
+
+  /**
+   * Open profile editor modal
+   */
+  function openProfileEditor(profileKey) {
+    const profile = profiles[profileKey];
+    if (!profile) return;
+    
+    // Fill in existing data if available
+    editAliasInput.value = profile.customData?.alias || profile.name;
+    editTagsInput.value = profile.customData?.tags?.join(', ') || '';
+    editGenderInput.value = profile.customData?.gender || '';
+    editAgeInput.value = profile.customData?.age || '';
+    editKinksInput.value = profile.customData?.kinks || '';
+    editNotesInput.value = profile.customData?.notes || '';
+    
+    profileModal.classList.add('active');
+  }
+
+  /**
+   * Close profile editor modal
+   */
+  function closeProfileEditor() {
+    profileModal.classList.remove('active');
+  }
+
+  /**
+   * Parse imported text into messages
+   */
+  function parseImportedText(text) {
+    const messages = [];
+    const lines = text.split('\n');
+    
+    // Regex to match username followed by time (e.g., "femmygb5:08 PM")
+    const userTimeRegex = /^([a-zA-Z0-9_]+)(\d{1,2}:\d{2}\s*(?:AM|PM)?)$/i;
+    
+    let currentAuthor = null;
+    let currentTime = null;
+    let currentContent = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      const match = line.match(userTimeRegex);
+      
+      if (match) {
+        // Save previous message if exists
+        if (currentAuthor && currentContent.length > 0) {
+          messages.push({
+            id: `imported_${Date.now()}_${messages.length}`,
+            author: currentAuthor,
+            authorId: currentAuthor.toLowerCase(),
+            content: currentContent.join(' '),
+            type: 'message',
+            timestamp: new Date().toISOString()
+          });
+        }
+        
+        // Start new message
+        currentAuthor = match[1];
+        currentTime = match[2];
+        currentContent = [];
+      } else {
+        // This is message content
+        if (currentAuthor) {
+          currentContent.push(line);
+        }
+      }
+    }
+    
+    // Don't forget the last message
+    if (currentAuthor && currentContent.length > 0) {
+      messages.push({
+        id: `imported_${Date.now()}_${messages.length}`,
+        author: currentAuthor,
+        authorId: currentAuthor.toLowerCase(),
+        content: currentContent.join(' '),
+        type: 'message',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    return messages;
   }
 
   /**
@@ -331,8 +541,32 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!profile) return '';
     
     const lines = [];
-    lines.push(`Chat History for: ${profile.name}`);
+    const displayName = profile.customData?.alias || profile.name;
+    
+    lines.push(`Chat History for: ${displayName}`);
     lines.push(`Total Messages: ${profile.messages.length}`);
+    
+    // Include custom data if available
+    if (profile.customData) {
+      lines.push('');
+      lines.push('--- Profile Info ---');
+      if (profile.customData.tags?.length) {
+        lines.push(`Tags: ${profile.customData.tags.join(', ')}`);
+      }
+      if (profile.customData.gender) {
+        lines.push(`Gender: ${profile.customData.gender}`);
+      }
+      if (profile.customData.age) {
+        lines.push(`Age: ${profile.customData.age}`);
+      }
+      if (profile.customData.kinks) {
+        lines.push(`Kinks/Interests: ${profile.customData.kinks}`);
+      }
+      if (profile.customData.notes) {
+        lines.push(`Notes: ${profile.customData.notes}`);
+      }
+    }
+    
     lines.push('='.repeat(50));
     lines.push('');
     
