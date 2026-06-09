@@ -244,6 +244,19 @@
     .load-profiles-btn:hover {
       background: #f0f0f0;
     }
+
+    .storage-info {
+      margin-top: 12px;
+      padding: 10px;
+      background: #e8f5e9;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #2e7d32;
+    }
+
+    .storage-info p {
+      margin-bottom: 8px;
+    }
   </style>
 </head>
 <body>
@@ -258,8 +271,13 @@
   </div>
 
   <div class="settings">
-    <label for="serverUrl">Server URL</label>
-    <input type="text" id="serverUrl" value="http://localhost:7337" placeholder="http://localhost:7337">
+    <label for="serverUrl">Server URL (deprecated - now using browser storage)</label>
+    <input type="text" id="serverUrl" value="http://localhost:7337" placeholder="http://localhost:7337" disabled>
+  </div>
+  
+  <div class="storage-info">
+    <p>✅ All chat data is now stored locally in your browser</p>
+    <button id="clearStorageBtn" class="action-btn" style="background: #f44336; color: white; margin-top: 8px;">🗑️ Clear All Stored Chat Data</button>
   </div>
 
   <div class="profile-section">

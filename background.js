@@ -6,11 +6,10 @@
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('Chat Archiver installed:', details.reason);
   
-  // Set default server URL in storage
-  chrome.storage.sync.set({ 
-    serverUrl: 'http://localhost:7337',
-    lastSyncTime: null,
-    totalMessagesArchived: 0
+  // Initialize storage
+  chrome.storage.local.set({ 
+    archivedMessages: [],
+    lastSyncTime: null
   });
 });
 
@@ -24,9 +23,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === 'updateStats') {
-    chrome.storage.sync.get(['totalMessagesArchived'], (result) => {
+    chrome.storage.local.get(['totalMessagesArchived'], (result) => {
       const newTotal = (result.totalMessagesArchived || 0) + request.count;
-      chrome.storage.sync.set({ 
+      chrome.storage.local.set({ 
         totalMessagesArchived: newTotal,
         lastSyncTime: new Date().toISOString()
       });
