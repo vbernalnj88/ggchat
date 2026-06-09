@@ -1,44 +1,54 @@
-```gitignore
-# Compiled and build artifacts
-*.pyc
-__pycache__/
-*.o
-*.obj
-*.class
-*.exe
-*.dll
-*.so
-*.a
-*.out
-
+```
 # Dependencies
 node_modules/
-venv/
-.venv/
-.env
-.env.local
-.env.*
 
 # Logs and temp files
 *.log
 *.tmp
-*.swp
-*.swo
+
+# Environment
+.env
+.env.local
+*.env.*
 
 # Editors
 .vscode/
 .idea/
 
-# Coverage reports
-coverage/
-htmlcov/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
 .coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git/modules/
+.DS_Store
+Thumbs.db
 
-# Build directories
+# Build results
 dist/
 build/
-target/
-*.tar.gz
+*.out
+*.exe
+*.dll
+*.so
+*.a
+*.obj
+
+# Compression
 *.zip
 *.gz
 *.tar
@@ -57,8 +67,36 @@ target/
 *.Z
 *.lz
 *.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
 
-# System files
+# Coverage
+coverage/
+htmlcov/
+.coverage*
+
+# Testing
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
+
+# Gradle
+.gradle/
+build/
+
+# Node
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 ```

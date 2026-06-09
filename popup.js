@@ -16,11 +16,52 @@ document.addEventListener('DOMContentLoaded', () => {
   const profileActionsEl = document.getElementById('profileActions');
   const copyChatBtn = document.getElementById('copyChatBtn');
   const previewAreaEl = document.getElementById('previewArea');
+  const clearStorageBtn = document.getElementById('clearStorageBtn');
   
   // State
   let allMessages = [];
   let profiles = {};
   let selectedProfile = null;
+
+  // Load stored messages on popup open
+  loadStoredMessages();
+  
+  async function loadStoredMessages() {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && tab.url.includes('gooning.games')) {
+        const response = await chrome.tabs.sendMessage(tab.id, { action: 'getStoredMessages' });
+        if (response.success && response.messages) {
+          allMessages = response.messages;
+          updateStatsDisplay(allMessages.length);
+          processProfiles(allMessages);
+          if (Object.keys(profiles).length > 0) {
+            renderProfileList();
+          }
+        }
+      }
+    } catch (error) {
+      console.log('Could not load stored messages (may not be on gooning.games)');
+    }
+  }
+
+  // Clear all stored data
+  clearStorageBtn.addEventListener('click', () => {
+    if (confirm('Are you sure you want to delete all stored chat history? This cannot be undone.')) {
+      chrome.storage.local.remove(['archivedMessages', 'lastSyncTime'], () => {
+        showStatus('success', 'All chat data cleared!');
+        allMessages = [];
+        profiles = {};
+        selectedProfile = null;
+        profileListEl.style.display = 'none';
+        profileListEl.innerHTML = '';
+        noProfilesMsgEl.style.display = 'block';
+        profileActionsEl.style.display = 'none';
+        previewAreaEl.style.display = 'none';
+        updateStatsDisplay(0);
+      });
+    }
+  });
 
   // Load saved server URL from storage
   chrome.storage.sync.get(['serverUrl'], (result) => {
@@ -48,13 +89,29 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Request all messages from content script
+      // First extract current messages from page
       const response = await chrome.tabs.sendMessage(tab.id, { action: 'extract' });
 
       if (response.success) {
-        allMessages = response.messages || [];
+        const currentMessages = response.messages || [];
+        
+        // Also get stored messages and merge
+        const storedResponse = await chrome.tabs.sendMessage(tab.id, { action: 'getStoredMessages' });
+        let storedMessages = [];
+        if (storedResponse.success) {
+          storedMessages = storedResponse.messages || [];
+        }
+        
+        // Merge current and stored messages, avoiding duplicates
+        const messageMap = new Map();
+        for (const msg of [...storedMessages, ...currentMessages]) {
+          messageMap.set(msg.id, msg);
+        }
+        
+        allMessages = Array.from(messageMap.values());
         processProfiles(allMessages);
         renderProfileList();
+        updateStatsDisplay(allMessages.length);
       } else {
         throw new Error(response.error || 'Failed to extract messages');
       }
@@ -120,19 +177,14 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       if (response.success) {
-        showStatus('success', `Successfully synced ${response.count} messages!`);
+        showStatus('success', `Successfully synced ${response.count} messages to browser storage!`);
         statsEl.style.display = 'block';
         messageCountEl.textContent = response.count;
         
-        // Also update local messages for profile browsing
-        const extractResponse = await chrome.tabs.sendMessage(tab.id, { action: 'extract' });
-        if (extractResponse.success) {
-          allMessages = extractResponse.messages || [];
-          processProfiles(allMessages);
-          if (Object.keys(profiles).length > 0) {
-            renderProfileList();
-          }
-        }
+        // Update local messages for profile browsing
+        allMessages = response.messages || [];
+        processProfiles(allMessages);
+        renderProfileList();
       } else {
         showStatus('error', response.error || 'Failed to sync messages');
       }
@@ -161,6 +213,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function hideStatus() {
     statusEl.className = 'status';
     statusEl.style.display = 'none';
+  }
+
+  function updateStatsDisplay(count) {
+    statsEl.style.display = 'block';
+    messageCountEl.textContent = count;
   }
 
   /**

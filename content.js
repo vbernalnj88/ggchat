@@ -5,13 +5,9 @@
  * including normal messages, continuations, and task/question cards.
  */
 
-// Configuration
-const DEFAULT_SERVER_URL = 'http://localhost:7337';
-
 // Message extraction logic
 class ChatArchiver {
   constructor() {
-    this.serverUrl = DEFAULT_SERVER_URL;
     this.extractedMessages = [];
   }
 
@@ -331,33 +327,43 @@ class ChatArchiver {
   }
 
   /**
-   * Send extracted messages to the server
+   * Send extracted messages to browser storage
    */
-  async sendToServer(messages, serverUrl = null) {
-    const url = serverUrl || this.serverUrl;
-    
-    try {
-      const response = await fetch(`${url}/api/chat/archive`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          messages: messages,
-          timestamp: new Date().toISOString(),
-          source: 'gooning.games'
-        })
+  async saveToStorage(messages) {
+    return new Promise((resolve, reject) => {
+      chrome.storage.local.get(['archivedMessages'], (result) => {
+        const existingMessages = result.archivedMessages || [];
+        
+        // Merge with existing messages, avoiding duplicates by ID
+        const messageMap = new Map();
+        for (const msg of existingMessages) {
+          messageMap.set(msg.id, msg);
+        }
+        for (const msg of messages) {
+          messageMap.set(msg.id, msg);
+        }
+        
+        const allMessages = Array.from(messageMap.values());
+        
+        // Sort by timestamp
+        allMessages.sort((a, b) => {
+          const timeA = new Date(a.timestamp || 0);
+          const timeB = new Date(b.timestamp || 0);
+          return timeA - timeB;
+        });
+        
+        chrome.storage.local.set({ 
+          archivedMessages: allMessages,
+          lastSyncTime: new Date().toISOString()
+        }, () => {
+          if (chrome.runtime.lastError) {
+            reject(chrome.runtime.lastError);
+          } else {
+            resolve({ success: true, count: allMessages.length });
+          }
+        });
       });
-
-      if (!response.ok) {
-        throw new Error(`Server responded with status ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('[ChatArchiver] Failed to send messages to server:', error);
-      throw error;
-    }
+    });
   }
 }
 
@@ -370,16 +376,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     try {
       const messages = archiver.extractAllMessages();
       
-      // Get server URL from request or use default
-      const serverUrl = request.serverUrl || DEFAULT_SERVER_URL;
-      
-      // Send to server
-      archiver.sendToServer(messages, serverUrl)
+      // Save to browser storage instead of sending to server
+      archiver.saveToStorage(messages)
         .then(response => {
           sendResponse({ 
             success: true, 
             count: messages.length,
-            serverResponse: response 
+            storageResponse: response 
           });
         })
         .catch(error => {
@@ -417,6 +420,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         count: 0
       });
     }
+    return true;
+  }
+  
+  if (request.action === 'getStoredMessages') {
+    chrome.storage.local.get(['archivedMessages'], (result) => {
+      sendResponse({ 
+        success: true, 
+        messages: result.archivedMessages || [] 
+      });
+    });
     return true;
   }
 });
